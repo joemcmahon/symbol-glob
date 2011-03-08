@@ -1,25 +1,15 @@
 package Symbol::Glob;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use warnings;
 use strict;
 use Carp;
 
-use Class::Std;
-use Class::Std::Utils;
-
 use Scalar::Util qw(reftype);
 
 {
-  my %hash_of     :ATTR;
-  my %code_of     :ATTR;
-  my %array_of    :ATTR;
-  my %scalar_of   :ATTR;
-  my %io_of       :ATTR;
-  my %format_of   :ATTR;
-
-  my %name_of     :ATTR(init_arg => 'name');
+  my (%hash_of, %code_of, %array_of, %scalar_of, %io_of, %format_of, %name_of);
 
   my %Slot_To_Storage_Of = (
     SCALAR => \%scalar_of,
@@ -41,13 +31,23 @@ use Scalar::Util qw(reftype);
 
   my %Method_To_Slot_Of = reverse %Slot_To_Method_Of;
 
-  sub BUILD {
-    my ($self, $ident, $arg_ref) = @_;
+  sub new {
+      my($class, $arg_ref) = @_;
+      my $self = {};
+      bless $self, $class;
+      $self->BUILD($arg_ref);
+      return $self; 
+  }
 
+  sub BUILD {
+    my ($self, $arg_ref) = @_;
+
+    die "Argument to Symbol::Glob->new() must be hash reference"
+        if not ref $arg_ref eq 'HASH';
     my $name = $arg_ref->{'name'};
     die "No typeglob name supplied" unless $name;
 
-    $name_of{$ident} = $name;
+    $name_of{$self} = $name;
 
   CHECK_SLOTS:
     for my $slot (keys %Slot_To_Storage_Of) {
@@ -94,7 +94,7 @@ use Scalar::Util qw(reftype);
       $self->_reslot(\$value, \%scalar_of, 'SCALAR');
     }
 
-    my $return_value = $scalar_of{ident $self};
+    my $return_value = $scalar_of{$self};
     return   !defined $return_value ? undef
            : !ref $return_value     ? $return_value
            : $$return_value;
@@ -107,7 +107,7 @@ use Scalar::Util qw(reftype);
                 : $self->_reslot($value, \%hash_of, 'HASH');
     }
     else {
-      wantarray ? %{$hash_of{ident $self}} : $hash_of{ident $self};
+      wantarray ? %{$hash_of{$self}} : $hash_of{$self};
     }
   }
 
@@ -118,7 +118,7 @@ use Scalar::Util qw(reftype);
                 : $self->_reslot($value, \%array_of, 'ARRAY');
     }
     else {
-      wantarray ? @{$array_of{ident $self}} : $array_of{ident $self};
+      wantarray ? @{$array_of{$self}} : $array_of{$self};
     }
   }
 
@@ -128,17 +128,17 @@ use Scalar::Util qw(reftype);
       $self->_reslot($value, \%code_of, 'CODE');
     }
     else {
-      $code_of{ident $self};
+      $code_of{$self};
     }
   }
 
   sub _reslot {
     my ($self, $value, $slot_of_ref, $slot_to_be_replaced) = @_;
     if ($slot_to_be_replaced eq 'SCALAR') {
-      $slot_of_ref->{ident $self} = $$value;
+      $slot_of_ref->{$self} = $$value;
     }
     else {
-      $slot_of_ref->{ident $self} = $value;
+      $slot_of_ref->{$self} = $value;
     }
 
     croak "You can't fill a $slot_to_be_replaced with a " .  reftype($value)
@@ -146,7 +146,7 @@ use Scalar::Util qw(reftype);
              (reftype($value) eq 'REF' and $slot_to_be_replaced eq 'SCALAR');
 
     # Handy way to reference the glob.
-    my $dest = $name_of{ident $self};
+    my $dest = $name_of{$self};
 
     {
       no strict;
@@ -154,7 +154,7 @@ use Scalar::Util qw(reftype);
       *{$dest} = $value;
     }
     
-    return $slot_of_ref->{ident $self};
+    return $slot_of_ref->{$self};
   }
 
   sub delete {
@@ -168,11 +168,11 @@ use Scalar::Util qw(reftype);
       my $glob_slot = $Method_To_Slot_Of{$slot_to_delete};
       $storage_ref = $Slot_To_Storage_Of{$glob_slot};
 
-      delete $storage_ref->{ident $self};
+      delete $storage_ref->{$self};
     }
  
     # Delete the glob so it can be reconstituted.
-    my $dest = $name_of{ident $self};
+    my $dest = $name_of{$self};
     my ($package, $symbol) = ($dest =~ /(.*::)*(.*)/);
     $package = __PACKAGE__.'::' unless $package;
     my $globref;
@@ -190,7 +190,7 @@ use Scalar::Util qw(reftype);
       next if $method eq $slot_to_delete;
 
       $storage_ref = $Slot_To_Storage_Of{$Method_To_Slot_Of{$method}};
-      my $value = $storage_ref->{ident $self};
+      my $value = $storage_ref->{$self};
       $value = \$value if $method eq 'scalar';
 
       {
@@ -198,7 +198,7 @@ use Scalar::Util qw(reftype);
         no strict 'refs';
       
         $globref->{$symbol} = $value
-          if defined $storage_ref->{ident $self};
+          if defined $storage_ref->{$self};
       } 
     }
   }

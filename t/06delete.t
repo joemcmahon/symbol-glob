@@ -48,7 +48,10 @@ ok defined &foo, "&foo defined";
 $foo = "foo is set";
 @foo = qw(foo is set);
 %foo = map {$_=>1} qw(foo is set);
-sub foo { 'foo!' }
+{
+  no warnings 'redefine';
+  sub foo { 'foo!' }
+}
 $foo_capture = Symbol::Glob->new({name=>'main::foo'});
 
 $foo_capture->delete('array');
@@ -60,7 +63,10 @@ ok defined &foo, "&foo defined";
 $foo = "foo is set";
 @foo = qw(foo is set);
 %foo = map {$_=>1} qw(foo is set);
-sub foo { 'foo!' }
+{
+  no warnings 'redefine';
+  sub foo { 'foo!' }
+}
 $foo_capture = Symbol::Glob->new({name=>'main::foo'});
 
 $foo_capture->delete('hash');
@@ -72,7 +78,10 @@ ok defined &foo, "&foo defined";
 $foo = "foo is set";
 @foo = qw(foo is set);
 %foo = map {$_=>1} qw(foo is set);
-sub foo { 'foo!' }
+{
+  no warnings 'redefine';
+  sub foo { 'foo!' }
+}
 $foo_capture = Symbol::Glob->new({name=>'main::foo'});
 
 $foo_capture->delete('sub');
