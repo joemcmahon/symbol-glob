@@ -1,5 +1,10 @@
 Revision history for Symbol-Glob
 
+0.03  Mon Dec  7 11:25:02 PST 2020
+  - Change "defined @array" tests to just "@array".
+    Previously legal, but no longer so, and works the
+    same in older cases anyway.
+
 0.02  Mon Mar  7 20:35:48 PST 2011
 	- Remove Class::Std prereq. It was a nice idea in its time...
 
